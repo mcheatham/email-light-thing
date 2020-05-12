@@ -6,6 +6,8 @@ import string
 import re
 import json
 import urllib.request
+from datetime import datetime
+
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -82,6 +84,7 @@ def main():
         if bad_aspects >= 2:
             num_bad_emails += 1
 
+    print(f"Checking at {datetime.now()}")
     print("num bad emails: ", num_bad_emails)
 
     modifier = round(255.0 / annoyance_limit)
@@ -104,6 +107,7 @@ def main():
         lightURL, data=params, headers={"content-type": "application/json"}
     )
     response = urllib.request.urlopen(req)
+    print()
 
 
 if __name__ == "__main__":
