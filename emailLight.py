@@ -17,13 +17,32 @@ lightURL = "http://homeassistant.local:5050/api/appdaemon/lights"
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
+# The directory this script is in
+script_dir = os.path.dirname(os.path.realpath(__file__))
 
-def main():
 
+def default_update_light(red, blue, brightness):
+    print("red: ", red, "  blue: ", blue, "  brightness: ", brightness)
+    newConditions = {
+        "command": "set",
+        "state": "on",
+        "light": "glow_ball",
+        "rgb_color": [red, 0, blue],
+        "brightness": brightness,
+    }
+    params = json.dumps(newConditions).encode("utf8")
+    req = urllib.request.Request(
+        lightURL, data=params, headers={"content-type": "application/json"}
+    )
+    response = urllib.request.urlopen(req)
+
+
+def main(update_light=default_update_light):
     annoyance_limit = 10
 
     # read list of bad words from file into a list
-    with open("badwords.txt") as f:
+    badwords_file = os.path.join(script_dir, "badwords.txt")
+    with open(badwords_file) as f:
         bad_words = f.read().splitlines()
     f.close()
 
@@ -35,18 +54,20 @@ def main():
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists("token.pickle"):
-        with open("token.pickle", "rb") as token:
+    token_file = os.path.join(script_dir, "token.pickle")
+    if os.path.exists(token_file):
+        with open(token_file, "rb") as token:
             creds = pickle.load(token)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            credentials_file = os.path.join(script_dir, "credentials.json")
+            flow = InstalledAppFlow.from_client_secrets_file(credentials_file, SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open("token.pickle", "wb") as token:
+        with open(token_file, "wb") as token:
             pickle.dump(creds, token)
 
     service = build("gmail", "v1", credentials=creds)
@@ -94,19 +115,8 @@ def main():
         blue = 255
     else:
         blue = round(min(255, (annoyance_limit - num_bad_emails) * modifier))
-    print("red: ", red, "  blue: ", blue, "  brightness: ", brightness)
-    newConditions = {
-        "command": "set",
-        "state": "on",
-        "light": "glow_ball",
-        "rgb_color": [red, 0, blue],
-        "brightness": brightness,
-    }
-    params = json.dumps(newConditions).encode("utf8")
-    req = urllib.request.Request(
-        lightURL, data=params, headers={"content-type": "application/json"}
-    )
-    response = urllib.request.urlopen(req)
+
+    update_light(red, blue, brightness)
     print()
 
 
